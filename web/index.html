@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lease Mileage Tracker</title>
+<meta name="description" content="See how many miles per day you can drive for the rest of your car lease.">
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--fg:#1b2420;--mute:#6a756f;--line:#dfe3dc;--accent:#1f6f4a;--ok:#1f6f4a;--warn:#b4531f;--okbg:#e7f3ec;--warnbg:#fbece3}
+@media (prefers-color-scheme:dark){:root{--bg:#121714;--card:#1b221e;--fg:#e8eee9;--mute:#93a099;--line:#2c3631;--accent:#5fc08e;--ok:#5fc08e;--warn:#f0955d;--okbg:#1d3327;--warnbg:#3a2418}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:32px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+h2{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.85rem;color:var(--mute)}
+input{width:100%;margin-top:4px;padding:10px 12px;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.hero{text-align:center}
+.big{font-size:2.6rem;font-weight:700;line-height:1.1}
+.unit{color:var(--mute);font-size:.95rem}
+.status{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:.95rem}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat b{display:block;font-size:1.25rem}.stat span{font-size:.85rem;color:var(--mute)}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin:12px 0 4px}
+.bar i{display:block;height:100%;background:var(--accent);width:0}
+footer{color:var(--mute);font-size:.8rem;text-align:center}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Lease Mileage Tracker</h1>
+  <p class="sub">Enter your lease terms and odometer. Everything runs in your browser; nothing is sent anywhere.</p>
+
+  <section class="card">
+    <h2>Your lease</h2>
+    <div class="grid">
+      <label>Lease start date<input type="date" id="start"></label>
+      <label>Term (months)<input type="number" id="term" min="1" step="1"></label>
+      <label>Total miles allowed<input type="number" id="allowed" min="0" step="100"></label>
+      <label>Odometer at signing<input type="number" id="inception" min="0" step="1"></label>
+      <label>Current odometer<input type="number" id="odo" min="0" step="1" placeholder="e.g. 14250"></label>
+      <label>As of date<input type="date" id="asof"></label>
+    </div>
+  </section>
+
+  <section class="card hero" id="result" hidden>
+    <h2>You can drive</h2>
+    <div><span class="big" id="pace">–</span> <span class="unit">miles per day</span></div>
+    <div class="unit" id="paceNote"></div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="card" id="details" hidden>
+    <h2>Details</h2>
+    <div class="bar"><i id="usedBar"></i></div>
+    <div class="unit" id="usedText"></div>
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><b id="remaining">–</b><span>miles remaining</span></div>
+      <div class="stat"><b id="daysLeft">–</b><span>days remaining</span></div>
+      <div class="stat"><b id="origPace">–</b><span>miles/day at signing</span></div>
+      <div class="stat"><b id="expected">–</b><span>expected odometer today</span></div>
+      <div class="stat"><b id="avgPace">–</b><span>your average so far (mi/day)</span></div>
+      <div class="stat"><b id="projected">–</b><span>projected total at lease end</span></div>
+    </div>
+  </section>
+  <footer>Lease end: <span id="endDate">–</span> · <a href="https://github.com/rclegg/lease_tracker">source</a></footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'lease-tracker-v1';
+const fields = ['start','term','allowed','inception','odo','asof'];
+const DAY = 86400000;
+const fmt = (n, d = 0) => n.toLocaleString(undefined, {maximumFractionDigits: d, minimumFractionDigits: d});
+const iso = d => d.toISOString().slice(0, 10);
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+function addMonths(d, n) {
+  const r = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));
+  const last = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
+  r.setUTCDate(Math.min(d.getUTCDate(), last));
+  return r;
+}
+function load() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+  const d = {term: 36, allowed: 30000, inception: 0, asof: iso(new Date()), ...s};
+  d.asof = iso(new Date());
+  fields.forEach(f => { if (d[f] !== undefined && d[f] !== '') $(f).value = d[f]; });
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(Object.fromEntries(fields.filter(f => f !== 'asof').map(f => [f, $(f).value])))); } catch (e) {}
+}
+function calc() {
+  save();
+  const v = f => $(f).value;
+  const ok = v('start') && v('asof') && v('odo') !== '' && +v('term') > 0 && +v('allowed') > 0;
+  $('result').hidden = $('details').hidden = !ok;
+  if (!ok) return;
+  const start = parse(v('start')), asof = parse(v('asof')), end = addMonths(start, +v('term'));
+  const totalDays = Math.round((end - start) / DAY);
+  const daysLeft = Math.max(0, Math.round((end - asof) / DAY));
+  const elapsed = Math.min(totalDays, Math.max(0, Math.round((asof - start) / DAY)));
+  const inception = +v('inception') || 0, odo = +v('odo'), allowed = +v('allowed');
+  const driven = odo - inception, remaining = allowed - driven;
+  const origPace = allowed / totalDays;
+  const expectedDriven = origPace * elapsed;
+  const pace = daysLeft > 0 ? Math.max(0, remaining) / daysLeft : 0;
+  const avg = elapsed > 0 ? driven / elapsed : 0;
+  const projected = driven + avg * daysLeft;
+  const diff = expectedDriven - driven;
+
+  $('pace').textContent = daysLeft > 0 ? fmt(pace, 1) : '–';
+  $('paceNote').textContent = daysLeft > 0 ? `for the next ${fmt(daysLeft)} days, to stay within your ${fmt(allowed)} miles` : 'The lease term has ended.';
+  const st = $('status');
+  if (remaining < 0) {
+    st.className = 'status warn';
+    st.textContent = `You are ${fmt(-remaining)} miles over the allowance.`;
+  } else if (diff >= 0) {
+    st.className = 'status ok';
+    st.textContent = `Ahead of schedule by ${fmt(diff)} miles.`;
+  } else {
+    st.className = 'status warn';
+    st.textContent = `${fmt(-diff)} miles ahead of the even pace (${fmt(origPace, 1)}/day).`;
+  }
+  const usedPct = Math.min(100, Math.max(0, driven / allowed * 100));
+  $('usedBar').style.width = usedPct + '%';
+  $('usedText').textContent = `${fmt(driven)} of ${fmt(allowed)} miles used (${fmt(usedPct)}%)`;
+  $('remaining').textContent = fmt(remaining);
+  $('daysLeft').textContent = fmt(daysLeft);
+  $('origPace').textContent = fmt(origPace, 1);
+  $('expected').textContent = fmt(inception + expectedDriven);
+  $('avgPace').textContent = elapsed > 0 ? fmt(avg, 1) : '–';
+  $('projected').textContent = elapsed > 0 ? fmt(inception + projected) : '–';
+  $('endDate').textContent = iso(end);
+}
+load();
+fields.forEach(f => $(f).addEventListener('input', calc));
+calc();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+    paths: [web/**, infra/**, .github/workflows/deploy.yml]
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  deploy:
+    uses: rclegg/aws-static-site-template/.github/workflows/deploy-static-site.yml@main
+    with:
+      stack-name: lease-tracker
+      role-arn: arn:aws:iam::233083552669:role/gha-lease-tracker
+      site-dir: web
