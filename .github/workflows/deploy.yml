@@ -10,7 +10,7 @@ permissions:
 jobs:
   deploy:
     uses: rclegg/aws-static-site-template/.github/workflows/deploy-static-site.yml@main
+    secrets: inherit
     with:
       stack-name: lease-tracker
-      role-arn: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/gha-lease-tracker
       site-dir: web
