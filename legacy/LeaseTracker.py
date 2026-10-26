@@ -1,26 +1,45 @@
-from datetime import timedelta, datetime, date
+"""Command-line lease mileage calculator (the web page in ../web does the same thing).
 
-# Enter Current Odometer Reading
-CurrentOdometerReading = round(float(input("Enter the current odometer reading: ")), 2)
+Prints the miles per day you can still drive to stay within the lease allowance.
+"""
+import calendar
+from datetime import date
 
-# Lease Configuration
-LeaseStartDate = date.fromisoformat('2021-02-13')
-LeaseTotalMileage = 30000
-LeaseTermInMonths = 36
-OdometerReadingAtLeaseInception = 26
+# --- Lease terms: edit these for your lease ---
+LEASE_START = date.fromisoformat('2021-02-13')
+LEASE_TERM_MONTHS = 36
+LEASE_MILES = 30000
+ODOMETER_AT_START = 26
 
-FinalMileageAllowed = LeaseTotalMileage + OdometerReadingAtLeaseInception
-LeaseEndDate = LeaseStartDate + timedelta(weeks=((LeaseTermInMonths / 12) * 52))
-MilesAllowedPerDay = LeaseTotalMileage / ((LeaseTermInMonths / 12) * 365.25)
-today = datetime.today()
-DaysRemaining = (LeaseEndDate - LeaseStartDate).days
 
-RemainingMiles = FinalMileageAllowed - CurrentOdometerReading
-RemainingMilesAllowedPerDay = RemainingMiles / DaysRemaining
+def add_months(start, months):
+    """Return start plus whole months, clamped to the last day of a shorter month."""
+    index = start.month - 1 + months
+    year, month = start.year + index // 12, index % 12 + 1
+    day = min(start.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
 
-print(f'''When the lease began you could drive {round(MilesAllowedPerDay, 2)} miles per day.
-You now have {round(RemainingMiles, 2)} miles remaining. 
-You can now drive at a pace of {round(RemainingMilesAllowedPerDay, 2)} \
-miles per day for the remainder of the lease.''')
 
-input("Press enter to exit.")
+def main():
+    odometer = float(input("Enter the current odometer reading: "))
+
+    lease_end = add_months(LEASE_START, LEASE_TERM_MONTHS)
+    lease_days = (lease_end - LEASE_START).days
+    days_left = (lease_end - date.today()).days
+
+    miles_per_day_at_start = LEASE_MILES / lease_days
+    miles_remaining = LEASE_MILES + ODOMETER_AT_START - odometer
+
+    print(f"When the lease began you could drive {miles_per_day_at_start:.2f} miles per day.")
+    print(f"You now have {miles_remaining:.2f} miles remaining.")
+    if days_left > 0:
+        print(f"You can now drive at a pace of {miles_remaining / days_left:.2f} "
+              f"miles per day for the remaining {days_left} days of the lease.")
+    else:
+        print(f"The lease ended on {lease_end}.")
+
+    input("Press enter to exit.")
+
+
+if __name__ == '__main__':
+    main()
