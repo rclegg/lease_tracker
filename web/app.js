@@ -1,0 +1,95 @@
+// Lease Mileage Tracker: all math runs in the browser; inputs are remembered in localStorage only.
+
+const STORAGE_KEY = 'lease-tracker-v1';
+const FIELDS = ['start', 'term', 'allowed', 'inception', 'odo', 'asof'];
+const DAY_MS = 86400000;
+
+const $ = id => document.getElementById(id);
+const fmt = (n, decimals = 0) =>
+  n.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+
+// --- Dates (all UTC so daylight saving never shifts a day count) ---
+const toIso = d => d.toISOString().slice(0, 10);
+const parseIso = s => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+};
+// Adds whole months, clamping to the last day of a shorter month (Jan 31 + 1 month = Feb 28/29).
+function addMonths(date, months) {
+  const result = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+  const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
+  result.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return result;
+}
+
+// --- Persistence (the "as of" date is never saved; it always starts as today) ---
+function loadInputs() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (e) { /* storage unavailable */ }
+  const values = { term: 36, allowed: 30000, inception: 0, ...saved, asof: toIso(new Date()) };
+  FIELDS.forEach(f => { if (values[f] !== undefined && values[f] !== '') $(f).value = values[f]; });
+}
+function saveInputs() {
+  const values = Object.fromEntries(FIELDS.filter(f => f !== 'asof').map(f => [f, $(f).value]));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(values)); } catch (e) { /* storage unavailable */ }
+}
+
+// --- Calculation ---
+function calculate() {
+  saveInputs();
+  const val = f => $(f).value;
+  const complete = val('start') && val('asof') && val('odo') !== '' && +val('term') > 0 && +val('allowed') > 0;
+  $('result').hidden = $('details').hidden = !complete;
+  if (!complete) return;
+
+  const start = parseIso(val('start'));
+  const asOf = parseIso(val('asof'));
+  const end = addMonths(start, +val('term'));
+  const totalDays = Math.round((end - start) / DAY_MS);
+  const daysLeft = Math.max(0, Math.round((end - asOf) / DAY_MS));
+  const elapsed = Math.min(totalDays, Math.max(0, Math.round((asOf - start) / DAY_MS)));
+
+  const inception = +val('inception') || 0;
+  const allowed = +val('allowed');
+  const driven = +val('odo') - inception;
+  const remaining = allowed - driven;
+
+  const evenPace = allowed / totalDays;                  // miles/day if spread evenly over the term
+  const expectedDriven = evenPace * elapsed;
+  const pace = daysLeft > 0 ? Math.max(0, remaining) / daysLeft : 0;
+  const avgPace = elapsed > 0 ? driven / elapsed : 0;
+  const projected = driven + avgPace * daysLeft;
+  const ahead = expectedDriven - driven;                 // positive = under the even pace
+
+  $('pace').textContent = daysLeft > 0 ? fmt(pace, 1) : '–';
+  $('paceNote').textContent = daysLeft > 0
+    ? `for the next ${fmt(daysLeft)} days, to stay within your ${fmt(allowed)} miles`
+    : 'The lease term has ended.';
+
+  const status = $('status');
+  if (remaining < 0) {
+    status.className = 'status warn';
+    status.textContent = `You are ${fmt(-remaining)} miles over the allowance.`;
+  } else if (ahead >= 0) {
+    status.className = 'status ok';
+    status.textContent = `Ahead of schedule by ${fmt(ahead)} miles.`;
+  } else {
+    status.className = 'status warn';
+    status.textContent = `${fmt(-ahead)} miles ahead of the even pace (${fmt(evenPace, 1)}/day).`;
+  }
+
+  const usedPct = Math.min(100, Math.max(0, driven / allowed * 100));
+  $('usedBar').style.width = usedPct + '%';
+  $('usedText').textContent = `${fmt(driven)} of ${fmt(allowed)} miles used (${fmt(usedPct)}%)`;
+  $('remaining').textContent = fmt(remaining);
+  $('daysLeft').textContent = fmt(daysLeft);
+  $('origPace').textContent = fmt(evenPace, 1);
+  $('expected').textContent = fmt(inception + expectedDriven);
+  $('avgPace').textContent = elapsed > 0 ? fmt(avgPace, 1) : '–';
+  $('projected').textContent = elapsed > 0 ? fmt(inception + projected) : '–';
+  $('endDate').textContent = toIso(end);
+}
+
+loadInputs();
+FIELDS.forEach(f => $(f).addEventListener('input', calculate));
+calculate();

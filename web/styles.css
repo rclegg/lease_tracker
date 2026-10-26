@@ -1,0 +1,42 @@
+/* Colors: light theme by default, dark via prefers-color-scheme. */
+:root {
+  --bg: #f6f7f4; --card: #fff; --fg: #1b2420; --mute: #6a756f; --line: #dfe3dc;
+  --accent: #1f6f4a; --ok: #1f6f4a; --warn: #b4531f; --okbg: #e7f3ec; --warnbg: #fbece3;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121714; --card: #1b221e; --fg: #e8eee9; --mute: #93a099; --line: #2c3631;
+    --accent: #5fc08e; --ok: #5fc08e; --warn: #f0955d; --okbg: #1d3327; --warnbg: #3a2418;
+  }
+}
+
+/* Layout */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); margin: 0 0 14px; }
+.sub { color: var(--mute); margin: 0 0 24px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+footer { color: var(--mute); font-size: .8rem; text-align: center; }
+a { color: var(--accent); }
+
+/* Inputs */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+label { display: block; font-size: .85rem; color: var(--mute); }
+input { width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Results */
+.hero { text-align: center; }
+.big { font-size: 2.6rem; font-weight: 700; line-height: 1.1; }
+.unit { color: var(--mute); font-size: .95rem; }
+.status { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: .95rem; }
+.ok { background: var(--okbg); color: var(--ok); }
+.warn { background: var(--warnbg); color: var(--warn); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.stat b { display: block; font-size: 1.25rem; }
+.stat span { font-size: .85rem; color: var(--mute); }
+.bar { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; margin: 12px 0 4px; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; }
