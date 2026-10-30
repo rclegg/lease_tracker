@@ -10,7 +10,7 @@
 <body>
 <main>
   <h1>Lease Mileage Tracker</h1>
-  <p class="sub">Enter your lease terms and odometer. Everything runs in your browser; nothing is sent anywhere.</p>
+  <p class="sub">Enter your lease terms and odometer. Everything runs in your browser; nothing is sent anywhere. Use "Copy link" to share or revisit a prefilled page.</p>
 
   <section class="card">
     <h2>Your lease</h2>
@@ -22,6 +22,11 @@
       <label>Current odometer<input type="number" id="odo" min="0" step="1" placeholder="e.g. 14250"></label>
       <label>As of date<input type="date" id="asof"></label>
     </div>
+    <div class="actions">
+      <button type="button" id="copy">Copy link</button>
+      <span class="unit" id="copyMsg" role="status"></span>
+    </div>
+    <div class="hint" id="hint" role="status"></div>
   </section>
 
   <section class="card hero" id="result" hidden>

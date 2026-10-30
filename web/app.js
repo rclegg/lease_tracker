@@ -1,4 +1,4 @@
-// Lease Mileage Tracker: all math runs in the browser; inputs are remembered in localStorage only.
+// Lease Mileage Tracker: all math runs in the browser; inputs are remembered in localStorage and can be shared as a link (query string).
 
 const STORAGE_KEY = 'lease-tracker-v1';
 const FIELDS = ['start', 'term', 'allowed', 'inception', 'odo', 'asof'];
@@ -23,10 +23,13 @@ function addMonths(date, months) {
 }
 
 // --- Persistence (the "as of" date is never saved; it always starts as today) ---
+// Values in the page URL (?start=...&odo=...) win over localStorage, so a shared link always shows what was shared.
 function loadInputs() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (e) { /* storage unavailable */ }
-  const values = { term: 36, allowed: 30000, inception: 0, ...saved, asof: toIso(new Date()) };
+  const params = new URLSearchParams(location.search);
+  const shared = Object.fromEntries(FIELDS.filter(f => params.has(f)).map(f => [f, params.get(f)]));
+  const values = { term: 36, allowed: 30000, inception: 0, ...saved, ...shared, asof: shared.asof || toIso(new Date()) };
   FIELDS.forEach(f => { if (values[f] !== undefined && values[f] !== '') $(f).value = values[f]; });
 }
 function saveInputs() {
@@ -34,11 +37,51 @@ function saveInputs() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(values)); } catch (e) { /* storage unavailable */ }
 }
 
+// --- Share link: every input except "as of" (which should default to today for whoever opens it) ---
+function shareUrl() {
+  const params = new URLSearchParams();
+  FIELDS.filter(f => f !== 'asof' && $(f).value !== '').forEach(f => params.set(f, $(f).value));
+  return location.origin + location.pathname + '?' + params;
+}
+async function copyLink() {
+  const url = shareUrl();
+  let ok = false;
+  try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { /* fall through to manual copy */ }
+  if (!ok) { window.prompt('Copy this link:', url); }
+  $('copyMsg').textContent = ok ? 'Link copied.' : '';
+  history.replaceState(null, '', url);
+}
+
+// Says what is missing or odd, in plain words; returns true when the results can be shown.
+function checkInputs() {
+  const val = f => $(f).value;
+  const missing = [];
+  if (!val('start')) missing.push('lease start date');
+  if (!(+val('term') > 0)) missing.push('term (months)');
+  if (!(+val('allowed') > 0)) missing.push('total miles allowed');
+  if (val('odo') === '') missing.push('current odometer');
+  if (!val('asof')) missing.push('as-of date');
+  const hint = $('hint');
+  if (missing.length) {
+    hint.textContent = 'Fill in ' + missing.join(', ') + ' to see your results.';
+    return false;
+  }
+  if (+val('odo') < (+val('inception') || 0)) {
+    hint.textContent = 'Current odometer is lower than the odometer at signing; check both.';
+  } else if (parseIso(val('asof')) <= parseIso(val('start'))) {
+    hint.textContent = 'The as-of date is on or before the lease start, so there is no driving history yet; average pace and projection need at least one day.';
+  } else {
+    hint.textContent = '';
+  }
+  return true;
+}
+
 // --- Calculation ---
 function calculate() {
   saveInputs();
+  $('copyMsg').textContent = '';
   const val = f => $(f).value;
-  const complete = val('start') && val('asof') && val('odo') !== '' && +val('term') > 0 && +val('allowed') > 0;
+  const complete = checkInputs();
   $('result').hidden = $('details').hidden = !complete;
   if (!complete) return;
 
@@ -93,3 +136,4 @@ function calculate() {
 loadInputs();
 FIELDS.forEach(f => $(f).addEventListener('input', calculate));
 calculate();
+$('copy').addEventListener('click', copyLink);
