@@ -47,3 +47,25 @@ button { font: inherit; padding: 8px 16px; border: 0; border-radius: 8px; backgr
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hint { margin-top: 12px; color: var(--warn); font-size: .9rem; }
 .hint:empty { display: none; }
+
+/* Gauges */
+.gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 480px) { .gauges { grid-template-columns: 1fr; } }
+.gauge { margin: 0; text-align: center; }
+.gauge svg { width: 100%; max-width: 260px; height: auto; }
+.gauge figcaption b { display: block; font-size: .95rem; }
+.gauge figcaption span { display: block; color: var(--mute); font-size: .85rem; }
+.g-ok, .g-warn { fill: none; stroke-width: 14; }
+.g-ok { stroke: var(--ok); opacity: .55; }
+.g-warn { stroke: var(--warn); opacity: .55; }
+.g-tick { stroke: var(--fg); stroke-width: 2; }
+.g-needle { stroke: var(--fg); stroke-width: 3; stroke-linecap: round; }
+.g-hub { fill: var(--fg); }
+.g-lbl { fill: var(--mute); font-size: 10px; }
+
+/* Aligned label/value rows */
+.rows { margin: 0 0 20px; }
+.rows > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.rows dt { color: var(--mute); }
+.rows dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+#numbers h2:not(:first-child) { margin-top: 8px; }

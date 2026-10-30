@@ -37,17 +37,35 @@
   </section>
 
   <section class="card" id="details" hidden>
-    <h2>Details</h2>
+    <h2>Pace check</h2>
+    <div class="gauges">
+      <figure class="gauge"><svg id="g1" viewBox="-14 0 228 118" role="img"></svg><figcaption><b id="g1Title">Mileage vs. even pace</b><span id="g1Text"></span></figcaption></figure>
+      <figure class="gauge"><svg id="g2" viewBox="-14 0 228 118" role="img"></svg><figcaption><b id="g2Title">Projected total vs. allowance</b><span id="g2Text"></span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="card" id="numbers" hidden>
+    <h2>Where you are now</h2>
     <div class="bar"><i id="usedBar"></i></div>
     <div class="unit" id="usedText"></div>
-    <div class="stats">
-      <div class="stat"><b id="remaining">–</b><span>miles remaining</span></div>
-      <div class="stat"><b id="daysLeft">–</b><span>days remaining</span></div>
-      <div class="stat"><b id="origPace">–</b><span>miles/day at signing</span></div>
-      <div class="stat"><b id="expected">–</b><span>expected odometer today</span></div>
-      <div class="stat"><b id="avgPace">–</b><span>your average so far (mi/day)</span></div>
-      <div class="stat"><b id="projected">–</b><span>projected total at lease end</span></div>
-    </div>
+    <dl class="rows">
+      <div><dt>Miles driven</dt><dd id="driven">–</dd></div>
+      <div><dt>Miles left in allowance</dt><dd id="remaining">–</dd></div>
+      <div><dt>Days left in lease</dt><dd id="daysLeft">–</dd></div>
+      <div><dt>Odometer today (expected at an even pace)</dt><dd id="expected">–</dd></div>
+    </dl>
+    <h2>Pace (miles per day)</h2>
+    <dl class="rows">
+      <div><dt>Even pace for the whole lease</dt><dd id="origPace">–</dd></div>
+      <div><dt>Your average so far</dt><dd id="avgPace">–</dd></div>
+      <div><dt>Allowed from here on</dt><dd id="needPace">–</dd></div>
+    </dl>
+    <h2>At lease end</h2>
+    <dl class="rows">
+      <div><dt>Projected miles driven (at your average)</dt><dd id="projDriven">–</dd></div>
+      <div><dt>Projected vs. allowance</dt><dd id="projDiff">–</dd></div>
+      <div><dt>Projected final odometer</dt><dd id="projected">–</dd></div>
+    </dl>
   </section>
   <footer>Lease end: <span id="endDate">–</span> · <a href="https://github.com/rclegg/lease_tracker">source</a></footer>
 </main>
